@@ -1,98 +1,87 @@
 package com.blinked.radiosamui
 
 import android.app.Application
-import android.content.Context
 import android.net.Uri
+import android.os.*
 import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
-import androidx.media3.common.PlaybackException
-import androidx.media3.common.Player.Listener
-import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.common.*
+import com.blinked.radiosamui.MSG_DO_CLEAR_MEDIA
+import com.blinked.radiosamui.MSG_DO_PAUSE
+import com.blinked.radiosamui.MSG_DO_PLAY
+import com.blinked.radiosamui.MSG_DO_STOP
 
-const val MUSIC_URL: String = "https://stream.mixadance.fm/radiosamui"
 
 class RadioViewModel(private val inApplication: Application): AndroidViewModel(inApplication) {
 
-    private val exoPlayer: ExoPlayer = getPlayerInstance(inApplication, MUSIC_URL).also { it.addListener(SamuiDataAndErrorListener()) }
+    private var playerService: Messenger? = null
 
     private var _errorCode: MutableLiveData<String> = MutableLiveData(null)
     val errorCode: LiveData<String> get() = _errorCode
 
-    private var _metaData: MutableLiveData<String> = MutableLiveData(_musicData)
+    private val _metaData: MutableLiveData<String> = MutableLiveData("")
     val metaData: LiveData<String> get() = _metaData
 
+    private val _isPLaying: MutableLiveData<Boolean> = MutableLiveData(false)
+    val isPlaying: LiveData<Boolean> get() = _isPLaying
+
     fun isPlayingNow(): Boolean {
-        return exoPlayer.isPlaying
+        return isPlaying.value!!
     }
 
-    fun saveMusicData() {
-        _musicData = metaData.value
+    fun clearMusicData() {
+        _metaData.value = "   "
     }
 
+    fun setRadio(radioToSet: Int) {
+        val message: Message = Message.obtain(null, radioToSet, 0, 0)
+        playerService?.send(message)
+    }
 
     fun Play() {
-        if (exoPlayer.isPlaying) return
-
-        exoPlayer.play()
+        val message: Message = Message.obtain(null, MSG_DO_PLAY, 0, 0)
+        playerService?.send(message)
     }
 
     fun Pause() {
-        if(!exoPlayer.isPlaying) return
-        exoPlayer.pause()
+        val message: Message = Message.obtain(null, MSG_DO_PAUSE, 0, 0)
+        playerService?.send(message)
     }
 
-    fun ReleasePlayer() {
-        exoPlayer.release()
+    fun stopAndRelease() {
+        var message: Message = Message.obtain(null, MSG_DO_STOP, 0, 0)
+        playerService?.send(message)
+
+        message = Message.obtain(null, MSG_DO_RELEASE_PLAYER, 0, 0)
+        playerService?.send(message)
+
+    }
+
+    fun clearMedia() {
+        val message: Message = Message.obtain(null, MSG_DO_CLEAR_MEDIA, 0, 0)
+        playerService?.send(message)
+    }
+
+    fun requestState() {
+        val message: Message = Message.obtain(null, MSG_REPORT_STATE, 0, 0)
+        playerService?.send(message)
     }
 
 
-    inner class SamuiDataAndErrorListener: Listener{
-        override fun onPlayerError(error: PlaybackException) {
-            super.onPlayerError(error)
-            _errorCode.value = PlaybackException.getErrorCodeName(error.errorCode)
-            Pause()
-        }
-
-        override fun onMediaMetadataChanged(mediaMetadata: MediaMetadata) {
-            super.onMediaMetadataChanged(mediaMetadata)
-            _metaData.value = with(mediaMetadata) {
-                val str = if (title.isNullOrEmpty()) "     " else title.toString()
-                str + "  " + str + "  " + str + "  " + str + "  " + str + "  " + str + "  " + str + "  "
-            }
-        }
+    fun receiveMetaData(str: String) {
+        _metaData.value = str
     }
 
-    companion object {
-
-        private var instance: ExoPlayer? = null
-
-        var _musicData: String? = "          "
-
-        fun getPlayerInstance(context: Context, url: String): ExoPlayer {
-            return instance ?: synchronized(this){
-                instance ?: buildPlayer(context, url).also{ instance = it}
-            }
-        }
-
-        private fun buildPlayer(context: Context, url: String): ExoPlayer {
-            return ExoPlayer.Builder(context).build().also { player ->
-                val uri = Uri.parse(url)
-
-                try {
-                    val mediaItem: MediaItem = MediaItem.fromUri(uri)
-
-                    player.setMediaItem(mediaItem)
-                    player.playWhenReady = false
-                    player.prepare()
-                } catch (e: Exception) {
-                    Log.d("Player initialize error", e.message.toString())
-                }
-            }
-        }
+    fun receiveState(state: Boolean) {
+        _isPLaying.value = state
     }
+
+    fun setServiceMessenger(service: Messenger?) {
+        playerService = service
+    }
+
+
+
 }
