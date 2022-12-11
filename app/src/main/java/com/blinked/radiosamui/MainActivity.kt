@@ -28,6 +28,7 @@ import com.blinked.radiosamui.databinding.ActivityMainBinding
 import com.google.android.material.snackbar.Snackbar
 
 
+
 class MainActivity : AppCompatActivity() {
     private lateinit var _binding : ActivityMainBinding
     private lateinit var _layout: View
@@ -60,12 +61,11 @@ class MainActivity : AppCompatActivity() {
         _layout = _binding.mainLayout
         supportActionBar?.hide()
 
-
         showActionSymbolToDo()
 
         checkRequestPermission(_layout)
 
-
+        _binding.textMusicData.isSelected = marqeeOn
 
         _binding.playButtonId.setOnClickListener { buttonView ->
             if (viewModel.isPlayingNow()){
@@ -81,7 +81,6 @@ class MainActivity : AppCompatActivity() {
         viewModel.metaData.observe(this){ musicData ->
             if (musicData == null) return@observe
             _binding.textMusicData.text = musicData
-            _binding.textMusicData.isSelected = marqeeOn
         }
 
         _binding.textMusicData.setOnClickListener { view ->

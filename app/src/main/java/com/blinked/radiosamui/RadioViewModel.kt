@@ -18,7 +18,7 @@ const val MUSIC_URL: String = "https://stream.mixadance.fm/radiosamui"
 
 class RadioViewModel(private val inApplication: Application): AndroidViewModel(inApplication) {
 
-    private val exoPlayer: ExoPlayer = getPlayerInstance(inApplication, MUSIC_URL).also { it.addListener(SamuiErrorListener()) }
+    private val exoPlayer: ExoPlayer = getPlayerInstance(inApplication, MUSIC_URL).also { it.addListener(SamuiDataAndErrorListener()) }
 
     private var _errorCode: MutableLiveData<String> = MutableLiveData(null)
     val errorCode: LiveData<String> get() = _errorCode
@@ -51,7 +51,7 @@ class RadioViewModel(private val inApplication: Application): AndroidViewModel(i
     }
 
 
-    inner class SamuiErrorListener: Listener{
+    inner class SamuiDataAndErrorListener: Listener{
         override fun onPlayerError(error: PlaybackException) {
             super.onPlayerError(error)
             _errorCode.value = PlaybackException.getErrorCodeName(error.errorCode)
@@ -89,11 +89,8 @@ class RadioViewModel(private val inApplication: Application): AndroidViewModel(i
                     player.setMediaItem(mediaItem)
                     player.playWhenReady = false
                     player.prepare()
-
-                    true
                 } catch (e: Exception) {
                     Log.d("Player initialize error", e.message.toString())
-                    false
                 }
             }
         }
